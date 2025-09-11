@@ -1,3 +1,4 @@
+#nullable enable
 using J2N.IO;
 using System;
 using System.IO;
@@ -37,8 +38,8 @@ namespace Lucene.Net.Replicator.Http
         /// Creates a new <see cref="HttpReplicator"/> with the given host, port and path.
         /// <see cref="HttpClientBase(string, int, string, HttpMessageHandler)"/> for more details.
         /// </summary>
-        public HttpReplicator(string host, int port, string path, HttpMessageHandler messageHandler = null)
-            : base(host, port, path, messageHandler)
+        public HttpReplicator(string host, int port, string path, HttpMessageHandler? messageHandler = null)
+            : base(host, port, path, messageHandler ?? new HttpClientHandler())
         {
         }
 
@@ -47,7 +48,7 @@ namespace Lucene.Net.Replicator.Http
         /// <see cref="HttpClientBase(string, HttpMessageHandler)"/> for more details.
         /// </summary>
         //Note: LUCENENET Specific
-        public HttpReplicator(string url, HttpMessageHandler messageHandler = null)
+        public HttpReplicator(string url, HttpMessageHandler? messageHandler = null)
             : this(url, new HttpClient(messageHandler ?? new HttpClientHandler()) { Timeout = DEFAULT_TIMEOUT })
         {
         }
@@ -65,13 +66,13 @@ namespace Lucene.Net.Replicator.Http
         /// <summary>
         /// Checks for updates at the remote host.
         /// </summary>
-        public virtual SessionToken CheckForUpdate(string currentVersion)
+        public virtual SessionToken? CheckForUpdate(string? currentVersion)
         {
-            string[] parameters = null;
-            if (currentVersion != null)
-                parameters = new[] { ReplicationService.REPLICATE_VERSION_PARAM, currentVersion };
+            string[]? parameters = null;
+            if (!string.IsNullOrEmpty(currentVersion))
+                parameters = new[] { ReplicationService.REPLICATE_VERSION_PARAM, currentVersion! };
 
-            HttpResponseMessage response = base.ExecuteGet(ReplicationService.ReplicationAction.UPDATE.ToString(), parameters);
+            HttpResponseMessage response = base.ExecuteGet(ReplicationService.ReplicationAction.UPDATE.ToString(), parameters ?? Array.Empty<string>());
             return DoAction(response, () =>
             {
                 using DataInputStream inputStream = new DataInputStream(GetResponseStream(response));
@@ -107,7 +108,7 @@ namespace Lucene.Net.Replicator.Http
         {
             HttpResponseMessage response = ExecuteGet(ReplicationService.ReplicationAction.RELEASE.ToString(), ReplicationService.REPLICATE_SESSION_ID_PARAM, sessionId);
             // do not remove this call: as it is still validating for us!
-            DoAction<object>(response, () => null);
+            DoAction<object?>(response, () => null);
         }
 
         #region Async methods (IAsyncReplicator)
@@ -120,15 +121,15 @@ namespace Lucene.Net.Replicator.Http
         /// <returns>
         /// A <see cref="SessionToken"/> if updates are available; otherwise, <c>null</c>.
         /// </returns>
-        public async Task<SessionToken?> CheckForUpdateAsync(string currentVersion, CancellationToken cancellationToken = default)
+        public async Task<SessionToken?> CheckForUpdateAsync(string? currentVersion, CancellationToken cancellationToken = default)
         {
-            string[] parameters = currentVersion != null
-                ? new[] { ReplicationService.REPLICATE_VERSION_PARAM, currentVersion }
+            string[]? parameters = !string.IsNullOrEmpty(currentVersion)
+                ? new[] { ReplicationService.REPLICATE_VERSION_PARAM, currentVersion! }
                 : null;
 
             using var response = await ExecuteGetAsync(
                 ReplicationService.ReplicationAction.UPDATE.ToString(),
-                parameters,
+                parameters ?? Array.Empty<string>(),
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             return await DoActionAsync(response, async () =>
@@ -201,3 +202,4 @@ namespace Lucene.Net.Replicator.Http
 
     }
 }
+#nullable restore
